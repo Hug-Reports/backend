@@ -53,6 +53,7 @@ const EditUrlThanksSchema = new mongoose.Schema({
   personalnotes: { type: Object, required: false },
   status: { type: String, required: true },
   userid: { type: String, required: true },
+  language: {type: String, required: true },
   githubUrl: { type: String, required: true },
 });
 
@@ -410,7 +411,8 @@ app.post("/addEditUrlThanks", async (req, res) => {
     personalnotes,
     status: "pending",
     userid,
-    githubUrl
+    language,
+    githubUrl,
   });
   
   await thanks.save();

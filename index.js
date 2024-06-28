@@ -403,39 +403,21 @@ app.post("/addThanks", async (req, res) => {
 app.post("/addEditUrlThanks", async (req, res) => {
   const { packagename, modules, personalnotes, userid, language, githubUrl } = req.body;
   console.log("Request:", req.body);
-  if (language == "python") {
-    //const pythonpackage = await PythonPackage.findOne({ usename: packagename });
-    
-    if (githubUrl) {
-      const thanks = new EditUrlThanks({
-        packagename,
-        modules,
-        personalnotes,
-        status: "pending",
-        userid,
-        githubUrl
-      });
-      await thanks.save();
-      /*
-      if (pythonpackage && !pythonpackage.github) {
-        pythonpackage.github = githubURL;
-        await pythonpackage.save();
-      } else {
-        if (!pythonpackage) {
-          const pythonpackage = new PythonPackage({
-            installname: packagename,
-            usename: packagename,
-            github: githubURL,
-          });
-          await pythonpackage.save();
-        }
-      }
-      */
-      res.status(200).json({
-        message: "Thanks saved",
-      });
-    }
-  }
+  
+  const thanks = new EditUrlThanks({
+    packagename,
+    modules,
+    personalnotes,
+    status: "pending",
+    userid,
+    githubUrl
+  });
+  
+  await thanks.save();
+  res.status(200).json({
+    message: "Thanks saved",
+  });
+  
 });
 
 const PORT = process.env.PORT || 5000;

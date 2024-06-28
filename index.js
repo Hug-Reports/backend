@@ -46,6 +46,19 @@ const ThanksSchema = new mongoose.Schema({
 
 const Thanks = mongoose.model("Thanks", ThanksSchema);
 
+const EditUrlThanksSchema = new mongoose.Schema({
+  timestamp: { type: Date, default: Date.now },
+  packagename: { type: String, required: true },
+  modules: { type: Array, required: true },
+  personalnotes: { type: Object, required: false },
+  status: { type: String, required: true },
+  userid: { type: String, required: true },
+  language: {type: String, required: true },
+  githubUrl: { type: String, required: true },
+});
+
+const EditUrlThanks = mongoose.model("EditUrlThanks", EditUrlThanksSchema);
+
 const UserSchema = new mongoose.Schema({
   username: { type: String, required: false },
   timestamp: { type: Date, default: Date.now },
@@ -385,6 +398,28 @@ app.post("/addThanks", async (req, res) => {
       });
     }
   }
+});
+
+// write new thanks to the database
+app.post("/addEditUrlThanks", async (req, res) => {
+  const { packagename, modules, personalnotes, userid, language, githubUrl } = req.body;
+  console.log("Request:", req.body);
+  
+  const thanks = new EditUrlThanks({
+    packagename,
+    modules,
+    personalnotes,
+    status: "pending",
+    userid,
+    language,
+    githubUrl,
+  });
+  
+  await thanks.save();
+  res.status(200).json({
+    message: "Thanks saved",
+  });
+  
 });
 
 const PORT = process.env.PORT || 5000;

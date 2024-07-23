@@ -397,6 +397,10 @@ app.post("/addThanks", async (req, res) => {
         message: "Thanks saved",
       });
     }
+  } else {
+    res.status(200).json({
+      message: "Thanks saved",
+    });
   }
 });
 

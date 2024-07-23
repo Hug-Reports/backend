@@ -3,21 +3,13 @@ import mongoose from "mongoose";
 import cors from "cors";
 import bodyParser from "body-parser";
 import { App } from "@octokit/app";
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
 import dotenv from "dotenv";
 import { spawn } from "child_process";
 
 dotenv.config();
 
-const _filename = fileURLToPath(import.meta.url);
-const _dirname = path.dirname(_filename);
-
-const privateKey = fs.readFileSync(
-  path.join(_dirname, process.env.PRIVATE_KEY_PATH),
-  "utf8"
-);
+const privateKeyBase64 = process.env.RSA_PRIVATE_KEY_BASE64;
+const privateKey = Buffer.from(privateKeyBase64, "base64").toString("utf-8");
 
 const githubconnection = new App({
   appId: process.env.APP_ID,
@@ -53,7 +45,7 @@ const EditUrlThanksSchema = new mongoose.Schema({
   personalnotes: { type: Object, required: false },
   status: { type: String, required: true },
   userid: { type: String, required: true },
-  language: {type: String, required: true },
+  language: { type: String, required: true },
   githubUrl: { type: String, required: true },
 });
 
@@ -406,9 +398,10 @@ app.post("/addThanks", async (req, res) => {
 
 // write new thanks to the database
 app.post("/addEditUrlThanks", async (req, res) => {
-  const { packagename, modules, personalnotes, userid, language, githubUrl } = req.body;
+  const { packagename, modules, personalnotes, userid, language, githubUrl } =
+    req.body;
   console.log("Request:", req.body);
-  
+
   const thanks = new EditUrlThanks({
     packagename,
     modules,
@@ -418,12 +411,11 @@ app.post("/addEditUrlThanks", async (req, res) => {
     language,
     githubUrl,
   });
-  
+
   await thanks.save();
   res.status(200).json({
     message: "Thanks saved",
   });
-  
 });
 
 const PORT = process.env.PORT || 5000;

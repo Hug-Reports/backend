@@ -21,3 +21,4 @@ node_modules
 # Local development
 .env
 hug-reports-extension.2024-05-27.private-key.pem
+key.base64

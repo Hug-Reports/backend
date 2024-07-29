@@ -390,19 +390,7 @@ app.post("/addThanks", async (req, res) => {
       });
     }
   } else {
-    //check if package is in js packages database and get installname and github url
-    const jspackage = await PythonPackage.findOne({ usename: packagename });
-    let githubURL = "";
-    if (jspackage && jspackage.github) {
-      githubURL = jspackage.github;
-    } else {
-      if (jspackage) {
-        let installname = jspackage.installname;
-        githubURL = await getJSRepo(installname);
-      } else {
-        githubURL = await getJSRepo(packagename);
-      }
-    }
+    let githubURL = await getJSRepo(packagename);
     console.log("GitHub URL:", githubURL);
     if (githubURL) {
       //if last character is / remove it
@@ -455,19 +443,6 @@ app.post("/addThanks", async (req, res) => {
         contributors,
       });
       await thanks.save();
-      if (jspackage && !jspackage.github) {
-        jspackage.github = githubURL;
-        await jspackage.save();
-      } else {
-        if (!jspackage) {
-          const jspackage = new PythonPackage({
-            installname: packagename,
-            usename: packagename,
-            github: githubURL,
-          });
-          await jspackage.save();
-        }
-      }
       res.status(200).json({
         message: "Thanks saved",
       });

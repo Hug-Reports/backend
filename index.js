@@ -390,9 +390,63 @@ app.post("/addThanks", async (req, res) => {
       });
     }
   } else {
-    res.status(200).json({
-      message: "Thanks saved",
-    });
+    let githubURL = await getJSRepo(packagename);
+    console.log("GitHub URL:", githubURL);
+    if (githubURL) {
+      //if last character is / remove it
+      if (githubURL[githubURL.length - 1] == "/") {
+        githubURL = githubURL.slice(0, -1);
+      }
+      if (githubURL.slice(-4) === ".git") {
+        githubURL = githubURL.slice(0, -4);
+      }
+      let splitstring = "https://github.com/";
+      if (githubURL.includes("https")) {
+        splitstring = "https://github.com/";
+      } else {
+        splitstring = "http://github.com/";
+      }
+      const [owner, repo] = githubURL.split(splitstring)[1].split("/");
+      console.log("Owner: ", owner);
+      console.log("Repo: ", repo);
+      const moduleFilePaths = await getAllFiles(owner, repo, modules);
+      console.log("ModuleFilePaths:" + moduleFilePaths);
+
+      let contributors = [];
+      let unfilteredContributors = [];
+
+      for (let i = 0; i < modules.length; i++) {
+        let filePath = moduleFilePaths[i];
+        let contributorEmails = await getContributors(owner, repo, filePath);
+        contributorEmails.forEach((element) => {
+          unfilteredContributors.push(element);
+        });
+      }
+
+      // remove duplicates
+      contributors = unfilteredContributors.filter(
+        (contributor, index, self) =>
+          index ===
+          self.findIndex(
+            (t) => t.email === contributor.email && t.name === contributor.name
+          )
+      );
+
+      console.log("Contributors:", contributors);
+
+      const thanks = new Thanks({
+        packagename,
+        modules,
+        personalnotes,
+        status: "pending",
+        userid,
+        contributors,
+      });
+      await thanks.save();
+      res.status(200).json({
+        message: "Thanks saved",
+      });
+    }
   }
 });
 

@@ -66,6 +66,13 @@ const PythonPackageSchema = new mongoose.Schema({
 
 const PythonPackage = mongoose.model("PythonPackage", PythonPackageSchema);
 
+const JSPackageSchema = new mongoose.Schema({
+  packagename: { type: String, required: true },
+  github: { type: String, required: false },
+});
+
+const JSPackage = mongoose.model("JSPackage", JSPackageSchema);
+
 const BlockedPythonPackageSchema = new mongoose.Schema({
   usename: { type: String, required: true },
   installname: { type: String, required: true },
@@ -77,13 +84,15 @@ const BlockedPythonPackage = mongoose.model(
 );
 
 const getJSPackageName = (importStatement) => {
-  const regex = /^(@[^/]+\/[^/]+|[^@/][^/]*)\//;
-  const match = importStatement.match(regex);
-  console.log("Match:", match);
-  if (match) {
-    return match[1] || match[0].slice(0, -1); // Remove trailing slash for the entire match
+  let newStatement = importStatement;
+  if (importStatement.charAt(0) != "@") {
+    const idx = importStatement.indexOf("/");
+    if (idx >= 0) {
+      newStatement = importStatement.slice(0, idx);
+    }
   }
-  return null;
+  console.log("Actual Package Name: ", newStatement);
+  return newStatement;
 };
 
 async function getJSRepo(packageName) {
@@ -211,7 +220,16 @@ app.post("/getGithub", async (req, res) => {
   ) {
     let processedPackageName = getJSPackageName(packageName);
     console.log("Processed Package Name:", processedPackageName);
-    let githubURL = await getJSRepo(processedPackageName);
+    const jspackage = await JSPackage.findOne({
+      packagename: packageName,
+    });
+    let githubURL;
+    if (jspackage && jspackage.github) {
+      githubURL = jspackage.github;
+    } else {
+      githubURL = await getJSRepo(processedPackageName);
+    }
+
     if (!githubURL) {
       res.status(200).json({
         url: "No GitHub URL found",
@@ -408,7 +426,13 @@ app.post("/addThanks", async (req, res) => {
       });
     }
   } else {
-    let githubURL = await getJSRepo(packagename);
+    const jspackage = await JSPackage.findOne({ packagename: packagename });
+    let githubURL = "";
+    if (jspackage && jspackage.github) {
+      githubURL = jspackage.github;
+    } else {
+      githubURL = await getJSRepo(packagename);
+    }
     console.log("GitHub URL:", githubURL);
     if (githubURL) {
       //if last character is / remove it
@@ -461,6 +485,18 @@ app.post("/addThanks", async (req, res) => {
         contributors,
       });
       await thanks.save();
+      if (jspackage && !jspackage.github) {
+        jspackage.github = githubURL;
+        await jspackage.save();
+      } else {
+        if (!jspackage) {
+          const jspackage = new JSPackage({
+            packagename: packagename,
+            github: githubURL,
+          });
+          await jspackage.save();
+        }
+      }
       res.status(200).json({
         message: "Thanks saved",
       });

@@ -76,6 +76,16 @@ const BlockedPythonPackage = mongoose.model(
   BlockedPythonPackageSchema
 );
 
+const getJSPackageName = (importStatement) => {
+  const regex = /^(@[^/]+\/[^/]+|[^@/][^/]*)\//;
+  const match = importStatement.match(regex);
+  console.log("Match:", match);
+  if (match) {
+    return match[1] || match[0].slice(0, -1); // Remove trailing slash for the entire match
+  }
+  return null;
+};
+
 async function getJSRepo(packageName) {
   try {
     const endpoint = `https://registry.npmjs.org/${packageName}`;
@@ -92,7 +102,7 @@ async function getFile(owner, repo, element) {
   if (element == "") {
     return "";
   }
-  const query = element + " in:file language:python repo:" + owner + "/" + repo;
+  const query = element + " in:file repo:" + owner + "/" + repo;
   console.log("Query:", query);
   const octokit = await githubconnection.getInstallationOctokit(
     process.env.INSTALLATION_ID
@@ -191,9 +201,17 @@ function getGithub(scriptPath, args = [packageName]) {
 }
 // returns github url is found for package
 app.post("/getGithub", async (req, res) => {
+  console.log("Request:", req.body);
   const packageName = req.body.packageName;
-  if (req.body.language == "javascript") {
-    let githubURL = await getJSRepo(packageName);
+  if (
+    req.body.language == "javascript" ||
+    req.body.language == "typescript" ||
+    req.body.language == "typescriptreact" ||
+    req.body.language == "javascriptreact"
+  ) {
+    let processedPackageName = getJSPackageName(packageName);
+    console.log("Processed Package Name:", processedPackageName);
+    let githubURL = await getJSRepo(processedPackageName);
     if (!githubURL) {
       res.status(200).json({
         url: "No GitHub URL found",

@@ -66,6 +66,13 @@ const PythonPackageSchema = new mongoose.Schema({
 
 const PythonPackage = mongoose.model("PythonPackage", PythonPackageSchema);
 
+const JSPackageSchema = new mongoose.Schema({
+  packagename: { type: String, required: true },
+  github: { type: String, required: false },
+});
+
+const JSPackage = mongoose.model("JSPackage", JSPackageSchema);
+
 const BlockedPythonPackageSchema = new mongoose.Schema({
   usename: { type: String, required: true },
   installname: { type: String, required: true },
@@ -75,6 +82,18 @@ const BlockedPythonPackage = mongoose.model(
   "BlockedPythonPackage",
   BlockedPythonPackageSchema
 );
+
+const getJSPackageName = (importStatement) => {
+  let newStatement = importStatement;
+  if (importStatement.charAt(0) != "@") {
+    const idx = importStatement.indexOf("/");
+    if (idx >= 0) {
+      newStatement = importStatement.slice(0, idx);
+    }
+  }
+  console.log("Actual Package Name: ", newStatement);
+  return newStatement;
+};
 
 async function getJSRepo(packageName) {
   try {
@@ -92,7 +111,7 @@ async function getFile(owner, repo, element) {
   if (element == "") {
     return "";
   }
-  const query = element + " in:file language:python repo:" + owner + "/" + repo;
+  const query = element + " in:file repo:" + owner + "/" + repo;
   console.log("Query:", query);
   const octokit = await githubconnection.getInstallationOctokit(
     process.env.INSTALLATION_ID
@@ -191,9 +210,26 @@ function getGithub(scriptPath, args = [packageName]) {
 }
 // returns github url is found for package
 app.post("/getGithub", async (req, res) => {
+  console.log("Request:", req.body);
   const packageName = req.body.packageName;
-  if (req.body.language == "javascript") {
-    let githubURL = await getJSRepo(packageName);
+  if (
+    req.body.language == "javascript" ||
+    req.body.language == "typescript" ||
+    req.body.language == "typescriptreact" ||
+    req.body.language == "javascriptreact"
+  ) {
+    let processedPackageName = getJSPackageName(packageName);
+    console.log("Processed Package Name:", processedPackageName);
+    const jspackage = await JSPackage.findOne({
+      packagename: packageName,
+    });
+    let githubURL;
+    if (jspackage && jspackage.github) {
+      githubURL = jspackage.github;
+    } else {
+      githubURL = await getJSRepo(processedPackageName);
+    }
+
     if (!githubURL) {
       res.status(200).json({
         url: "No GitHub URL found",
@@ -390,7 +426,13 @@ app.post("/addThanks", async (req, res) => {
       });
     }
   } else {
-    let githubURL = await getJSRepo(packagename);
+    const jspackage = await JSPackage.findOne({ packagename: packagename });
+    let githubURL = "";
+    if (jspackage && jspackage.github) {
+      githubURL = jspackage.github;
+    } else {
+      githubURL = await getJSRepo(packagename);
+    }
     console.log("GitHub URL:", githubURL);
     if (githubURL) {
       //if last character is / remove it
@@ -443,6 +485,18 @@ app.post("/addThanks", async (req, res) => {
         contributors,
       });
       await thanks.save();
+      if (jspackage && !jspackage.github) {
+        jspackage.github = githubURL;
+        await jspackage.save();
+      } else {
+        if (!jspackage) {
+          const jspackage = new JSPackage({
+            packagename: packagename,
+            github: githubURL,
+          });
+          await jspackage.save();
+        }
+      }
       res.status(200).json({
         message: "Thanks saved",
       });

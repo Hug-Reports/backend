@@ -231,26 +231,26 @@ app.post("/getGithub", async (req, res) => {
     }
 
     if (!githubURL) {
+      console.log("No URL found");
       res.status(200).json({
         url: "No GitHub URL found",
       });
     } else {
       //check if github url starts with git+ and remove it
-      if (githubURL.startsWith("git+")) {
-        githubURL = githubURL.slice(4);
-        //check if githuburl ends with .git and remove it
-        if (githubURL.endsWith(".git")) {
-          githubURL = githubURL.slice(0, -4);
-
-          res.status(200).json({
-            url: githubURL,
-          });
-        } else {
-          res.status(200).json({
-            url: "No GitHub URL found",
-          });
-        }
+      if (githubURL.endsWith(".git")) {
+        githubURL = githubURL.slice(0, -4);
+      }
+      
+      const index = githubURL.indexOf("github.com");
+      if (index >= 0) {
+        githubURL = githubURL.slice(index);
+        githubURL = "https://" + githubURL;
+        console.log("github Url: ", githubURL);
+        res.status(200).json({
+          url: githubURL,
+        });
       } else {
+        console.log("No URL: ", githubURL);
         res.status(200).json({
           url: "No GitHub URL found",
         });

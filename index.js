@@ -185,7 +185,8 @@ async function getContributors(owner, repo, filePath) {
 // potentially get rid of the modules arg here
 function getGithub(scriptPath, args = [packageName]) {
   return new Promise((resolve, reject) => {
-    const pythonProcess = spawn("python3", [scriptPath, ...args]);
+    const pythonExecutable = "/home/venv/bin/python3";
+    const pythonProcess = spawn(pythonExecutable, [scriptPath, ...args]);
 
     // Collect data from the script
     let data = "";
